@@ -22,13 +22,13 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache.sling</groupId>
-        <artifactId>sling</artifactId>
-        <version>33</version>
+        <artifactId>sling-bundle-parent</artifactId>
+        <version>40</version>
         <relativePath />
     </parent>
 
     <artifactId>org.apache.sling.event</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <version>4.2.13-SNAPSHOT</version>
 
     <name>Apache Sling Event Support</name>
@@ -57,39 +57,99 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>bnd-process</id>
+                        <goals>
+                            <goal>bnd-process</goal>
+                        </goals>
+                        <configuration>
+                            <bnd>
+-noextraheader:true
+-snapshot: SNAPSHOT
+Sling-Namespaces: slingevent=http://sling.apache.org/jcr/event/1.0
+Sling-Nodetypes: SLING-INF/nodetypes/event.cnd
+Import-Package: \
+    javax.servlet.http;resolution:=optional,\
+    org.apache.felix.inventory;resolution:=optional,\
+    javax.servlet,\
+    <!-- For build compatibility with Java 11 -->\
+    javax.annotation;version="[0.0,2)",\
+    *
+Export-Package: \
+    org.apache.sling.event.jobs,\
+    org.apache.sling.event.jobs.consumer,\
+    org.apache.sling.event.jobs.jmx
+
+-conditionalpackage: \
+    org.apache.jackrabbit.util,\
+    org.apache.sling.commons.osgi,\
+    org.apache.sling.event.api
+-includeresource: \
+    target/dependency/org.apache.sling.event.api.jar,\
+    @target/dependency/quartz.jar!/org/quartz/CronExpression.class,\
+    @target/dependency/quartz.jar!/org/quartz/ValueSet.class
+Bundle-Classpath: ., org.apache.sling.event.api.jar
+                            </bnd>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-baseline-maven-plugin</artifactId>
+            </plugin>
+<!--             <plugin> -->
+<!--                 <groupId>org.apache.felix</groupId> -->
+<!--                 <artifactId>maven-bundle-plugin</artifactId> -->
+<!--                 <extensions>true</extensions> -->
+<!--                 <configuration> -->
+<!--                     <instructions> -->
+<!--                         <Embed-Dependency> -->
+<!--                             jackrabbit-jcr-commons;inline="org/apache/jackrabbit/util/ISO9075.*|org/apache/jackrabbit/util/ISO8601.*|org/apache/jackrabbit/util/XMLChar.*", -->
+<!--                             org.apache.sling.commons.osgi;inline="org/apache/sling/commons/osgi/PropertiesUtil.*", -->
+<!--                             quartz;inline="org/quartz/CronExpression.*|org/quartz/ValueSet.*", -->
+<!--                             org.apache.sling.event.api -->
+<!--                         </Embed-Dependency> -->
+<!--                     </instructions> -->
+<!--                 </configuration> -->
+<!--             </plugin> -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <phase>process-sources</phase>
+                    </execution>
+                </executions>
                 <configuration>
-                    <instructions>
-                        <Import-Package>
-                            javax.servlet;javax.servlet.http;resolution:=optional,
-                            org.apache.felix.inventory;resolution:=optional,
-                            *
-                        </Import-Package>
-                        <Export-Package>
-                        	org.apache.sling.event.jobs,
-                        	org.apache.sling.event.jobs.consumer,
-                        	org.apache.sling.event.jobs.jmx
-                        </Export-Package>
-                       <DynamicImport-Package>
-                            javax.servlet,
-                            javax.servlet.http,
-                            org.apache.felix.inventory
-                        </DynamicImport-Package>
-                        <Sling-Nodetypes>
-                            SLING-INF/nodetypes/event.cnd
-                        </Sling-Nodetypes>
-                        <Sling-Namespaces>
-                            slingevent=http://sling.apache.org/jcr/event/1.0
-                        </Sling-Namespaces>
-                        <Embed-Dependency>
-                            jackrabbit-jcr-commons;inline="org/apache/jackrabbit/util/ISO9075.*|org/apache/jackrabbit/util/ISO8601.*|org/apache/jackrabbit/util/XMLChar.*",
-                            org.apache.sling.commons.osgi;inline="org/apache/sling/commons/osgi/PropertiesUtil.*",
-                            quartz;inline="org/quartz/CronExpression.*|org/quartz/ValueSet.*",
-                            org.apache.sling.event.api
-                        </Embed-Dependency>
-                    </instructions>
+                    <artifactItems>
+                        <artifactItem>
+                            <groupId>org.apache.sling</groupId>
+                            <artifactId>org.apache.sling.event.api</artifactId>
+                            <destFileName>org.apache.sling.event.api.jar</destFileName>
+                        </artifactItem>
+                        <artifactItem>
+                            <groupId>org.quartz-scheduler</groupId>
+                            <artifactId>quartz</artifactId>
+                            <destFileName>quartz.jar</destFileName>
+                        </artifactItem>
+                    </artifactItems>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                    </archive>
                 </configuration>
             </plugin>
            <plugin>
@@ -144,16 +204,16 @@
                 <configuration>
                     <systemProperties>
                         <property>
-                            <name>project.bundle.file</name>
-                            <value>${bundle.file.name}</value>
+                              <name>bundle.filename</name>
+                              <value>${basedir}/target/${project.build.finalName}.jar</value>
                         </property>
                         <property>
-                            <name>bundle.build.dir</name>
-                            <value>${bundle.build.dir}</value>
+                            <name>org.ops4j.pax.url.mvn.useFallbackRepositories</name>
+                            <value>false</value>
                         </property>
                         <property>
-                            <name>org.osgi.service.http.port</name>
-                            <value>${http.port}</value>
+                            <name>org.ops4j.pax.url.mvn.repositories</name>
+                            <value>https://repo1.maven.org/maven2@id=central</value>
                         </property>
                     </systemProperties>
                     <argLine>
@@ -163,6 +223,10 @@
                         <include>**/it/*</include>
                     </includes>
                 </configuration>
+            </plugin>
+            <plugin>
+              <groupId>org.apache.servicemix.tooling</groupId>
+              <artifactId>depends-maven-plugin</artifactId>
             </plugin>
             <plugin>
                 <artifactId>maven-clean-plugin</artifactId>
@@ -368,5 +432,61 @@
     		<artifactId>org.apache.sling.event.api</artifactId>
     		<version>1.0.0</version>
     	</dependency>
+        
+        <!-- Sling Testing PaxExam -->
+<dependency>
+  <groupId>org.apache.sling</groupId>
+  <artifactId>org.apache.sling.testing.paxexam</artifactId>
+  <version>3.1.0</version>
+  <scope>test</scope>
+</dependency>
+
+<!-- an OSGi framework -->
+<dependency>
+  <groupId>org.apache.felix</groupId>
+  <artifactId>org.apache.felix.framework</artifactId>
+  <version>6.0.3</version>
+  <scope>test</scope>
+</dependency>
+
+<!-- JUnit -->
+<dependency>
+  <groupId>junit</groupId>
+  <artifactId>junit</artifactId>
+  <scope>test</scope>
+</dependency>
+
+<!-- Pax Exam -->
+<dependency>
+  <groupId>org.ops4j.pax.exam</groupId>
+  <artifactId>pax-exam</artifactId>
+  <version>4.13.4</version>
+  <scope>test</scope>
+</dependency>
+<dependency>
+  <groupId>org.ops4j.pax.exam</groupId>
+  <artifactId>pax-exam-cm</artifactId>
+  <version>4.13.4</version>
+  <scope>test</scope>
+</dependency>
+<dependency>
+  <groupId>org.ops4j.pax.exam</groupId>
+  <artifactId>pax-exam-container-forked</artifactId>
+  <version>4.13.4</version>
+  <scope>test</scope>
+</dependency>
+<dependency>
+  <groupId>org.ops4j.pax.exam</groupId>
+  <artifactId>pax-exam-junit4</artifactId>
+  <version>4.13.4</version>
+  <scope>test</scope>
+</dependency>
+<dependency>
+  <groupId>org.ops4j.pax.exam</groupId>
+  <artifactId>pax-exam-link-mvn</artifactId>
+  <version>4.13.4</version>
+  <scope>test</scope>
+</dependency>
+        
     </dependencies>
 </project>
