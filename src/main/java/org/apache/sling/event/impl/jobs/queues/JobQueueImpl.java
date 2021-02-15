@@ -454,8 +454,8 @@ public class JobQueueImpl
 
                 retryCount++;
                 if ( retries != -1 && retryCount > retries ) {
-                    if ( this.logger.isDebugEnabled() ) {
-                        this.logger.error("Cancelled job {} after {} unsuccessful retries",
+                    if ( this.logger.isInfoEnabled() ) {
+                        this.logger.info("Cancelled job {} after {} unsuccessful retries",
                                 Utility.toString(handler.getJob()),
                                 retries);
                     }
