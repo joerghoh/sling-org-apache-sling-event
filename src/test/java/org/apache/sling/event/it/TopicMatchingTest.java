@@ -34,9 +34,13 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(PaxExam.class)
 public class TopicMatchingTest extends AbstractJobHandlingTest {
+
+    private final Logger log = LoggerFactory.getLogger(TopicMatchingTest.class);
 
     public static final String TOPIC = "sling/test/a";
 
@@ -44,7 +48,7 @@ public class TopicMatchingTest extends AbstractJobHandlingTest {
     @Before
     public void setup() throws IOException {
         super.setup();
-
+        System.out.println("Topic Matching test setup");
         this.sleep(1000L);
     }
 
@@ -59,6 +63,7 @@ public class TopicMatchingTest extends AbstractJobHandlingTest {
      */
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
     public void testSimpleMatching() throws Exception {
+        log.info("testSimpleMatching started");
         final Barrier barrier = new Barrier(2);
 
         this.registerJobExecutor("sling/test/*",
@@ -80,6 +85,7 @@ public class TopicMatchingTest extends AbstractJobHandlingTest {
 
         this.getJobManager().addJob(TOPIC, null);
         barrier.block();
+        log.info("testSimpleMatching completed");
     }
 
     /**
@@ -87,6 +93,7 @@ public class TopicMatchingTest extends AbstractJobHandlingTest {
      */
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
     public void testDeepMatching() throws Exception {
+        log.info("testDeepMatching started");
         final Barrier barrier = new Barrier(2);
 
         this.registerJobExecutor("sling/**",
@@ -108,6 +115,7 @@ public class TopicMatchingTest extends AbstractJobHandlingTest {
 
         this.getJobManager().addJob(TOPIC, null);
         barrier.block();
+        log.info("testDeepMatching completed");
     }
 
     /**
@@ -115,6 +123,7 @@ public class TopicMatchingTest extends AbstractJobHandlingTest {
      */
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
     public void testOrdering() throws Exception {
+        log.info("testOrdering started");
         final Barrier barrier1 = new Barrier(2);
         final Barrier barrier2 = new Barrier(2);
         final Barrier barrier3 = new Barrier(2);
@@ -164,5 +173,6 @@ public class TopicMatchingTest extends AbstractJobHandlingTest {
         this.waitConsumerChangeCount(cc + 1);
         this.getJobManager().addJob(TOPIC, null);
         barrier1.block();
+        log.info("testOrdering completed");
     }
 }

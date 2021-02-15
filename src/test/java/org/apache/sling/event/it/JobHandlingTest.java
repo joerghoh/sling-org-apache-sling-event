@@ -51,11 +51,15 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(PaxExam.class)
 public class JobHandlingTest extends AbstractJobHandlingTest {
 
     public static final String TOPIC = "sling/test";
+
+    private Logger log = LoggerFactory.getLogger(JobHandlingTest.class);
 
     @Override
     @Before
@@ -92,8 +96,9 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
         this.registerJobConsumer(TOPIC,
                 new JobConsumer() {
 
-            @Override
+                    @Override
                     public JobResult process(final Job job) {
+                        log.info("testSimpleJobExecutionUsingJobConsumer process");
                         cb.block();
                         return JobResult.OK;
                     }
@@ -118,6 +123,7 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
 
                     @Override
                     public JobExecutionResult process(final Job job, final JobExecutionContext context) {
+                        log.info("testSimpleJobExecutionUsingJobExecutor process");
                         cb.block();
                         return context.result().succeeded();
                     }
@@ -174,7 +180,9 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
 
                     @Override
                     public JobResult process(Job job) {
+                        log.info("testCancelJob process");
                         cb.block();
+                        log.info("testCancelJob process 2");
                         cb2.block();
                         return JobResult.FAILED;
                     }
@@ -370,6 +378,7 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
                     @Override
                     public void handleEvent(Event event) {
                         final String id = (String)event.getProperty("id");
+                        log.info("Job {} started", id);
                         started.add(id);
                     }
                 });
@@ -433,4 +442,5 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
         assertEquals("Unprocessed count", 0, jobManager.getStatistics().getNumberOfJobs());
         assertEquals("Finished count", COUNT / 2, jobManager.getStatistics().getNumberOfFinishedJobs());
     }
+
 }
