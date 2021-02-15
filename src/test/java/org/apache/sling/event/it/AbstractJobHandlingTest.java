@@ -23,19 +23,13 @@ import static org.apache.sling.testing.paxexam.SlingOptions.backing;
 import static org.apache.sling.testing.paxexam.SlingOptions.paxTinybundles;
 import static org.apache.sling.testing.paxexam.SlingOptions.spyfly;
 import static org.ops4j.pax.exam.CoreOptions.composite;
-import static org.ops4j.pax.exam.CoreOptions.frameworkProperty;
 import static org.ops4j.pax.exam.CoreOptions.junitBundles;
 import static org.ops4j.pax.exam.CoreOptions.keepCaches;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
 import static org.ops4j.pax.exam.CoreOptions.options;
 import static org.ops4j.pax.exam.CoreOptions.repository;
-import static org.ops4j.pax.exam.CoreOptions.systemProperty;
-import static org.ops4j.pax.exam.CoreOptions.when;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
-
-import org.apache.sling.testing.paxexam.SlingOptions;
-import org.apache.sling.testing.paxexam.SlingVersionResolver;
-import org.apache.sling.testing.paxexam.TestSupport;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.newConfiguration;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,14 +51,15 @@ import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.jobs.JobManager;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
 import org.apache.sling.event.jobs.consumer.JobExecutor;
+import org.apache.sling.jcr.api.SlingRepository;
+import org.apache.sling.testing.paxexam.SlingOptions;
+import org.apache.sling.testing.paxexam.SlingVersionResolver;
+import org.apache.sling.testing.paxexam.TestSupport;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Option;
-import org.ops4j.pax.exam.cm.ConfigurationAdminOptions;
 import org.ops4j.pax.exam.options.ModifiableCompositeOption;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleException;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
@@ -72,9 +67,12 @@ import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.event.EventAdmin;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class AbstractJobHandlingTest extends TestSupport {
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private static final String BUNDLE_JAR_SYS_PROP = "project.bundle.file";
 
@@ -96,6 +94,9 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
     @Inject
     protected BundleContext bc;
 
+    @Inject // just to block the dependencies
+    protected SlingRepository repo;
+
     protected List<ServiceRegistration<?>> registrations = new ArrayList<>();
     
     public static SlingVersionResolver versionResolver = new SlingVersionResolver();
@@ -115,160 +116,36 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
         }
         
         return options(
-//                frameworkProperty("sling.home").value(slingHome),
-//                frameworkProperty("repository.home").value(slingHome + File.separatorChar + "repository"),
-//                when( localRepo.length() > 0 ).useOptions(
-//                        systemProperty("org.ops4j.pax.url.mvn.localRepository").value(localRepo)
-//                ),
-//                when( System.getProperty(PORT_CONFIG) != null ).useOptions(
-//                        systemProperty(PORT_CONFIG).value(System.getProperty(PORT_CONFIG))),
-//                systemProperty("pax.exam.osgi.unresolved.fail").value("true"),
-//
-//                ConfigurationAdminOptions.newConfiguration("org.apache.felix.jaas.ConfigurationSpi")
-//                    .create(true)
-//                    .put("jaas.defaultRealmName", "jackrabbit.oak")
-//                    .put("jaas.configProviderName", "FelixJaasProvider")
-//                    .asOption(),
-//                ConfigurationAdminOptions.factoryConfiguration("org.apache.felix.jaas.Configuration.factory")
-//                    .create(true)
-//                    .put("jaas.controlFlag", "optional")
-//                    .put("jaas.classname", "org.apache.jackrabbit.oak.spi.security.authentication.GuestLoginModule")
-//                    .put("jaas.ranking", 300)
-//                    .asOption(),
-//                ConfigurationAdminOptions.factoryConfiguration("org.apache.felix.jaas.Configuration.factory")
-//                    .create(true)
-//                    .put("jaas.controlFlag", "required")
-//                    .put("jaas.classname", "org.apache.jackrabbit.oak.security.authentication.user.LoginModuleImpl")
-//                    .asOption(),
-//                ConfigurationAdminOptions.factoryConfiguration("org.apache.felix.jaas.Configuration.factory")
-//                    .create(true)
-//                    .put("jaas.controlFlag", "sufficient")
-//                    .put("jaas.classname", "org.apache.jackrabbit.oak.security.authentication.token.TokenLoginModule")
-//                    .put("jaas.ranking", 200)
-//                    .asOption(),
-//                ConfigurationAdminOptions.newConfiguration("org.apache.jackrabbit.oak.security.authentication.AuthenticationConfigurationImpl")
-//                    .create(true)
-//                    .put("org.apache.jackrabbit.oak.authentication.configSpiName", "FelixJaasProvider")
-//                    .asOption(),
-//                ConfigurationAdminOptions.newConfiguration("org.apache.jackrabbit.oak.security.user.UserConfigurationImpl")
-//                    .create(true)
-//                    .put("groupsPath", "/home/groups")
-//                    .put("usersPath", "/home/users")
-//                    .put("defaultPath", "1")
-//                    .put("importBehavior", "besteffort")
-//                    .asOption(),
-//                ConfigurationAdminOptions.newConfiguration("org.apache.jackrabbit.oak.security.user.RandomAuthorizableNodeName")
-//                    .create(true)
-//                    .put("enabledActions", new String[] {"org.apache.jackrabbit.oak.spi.security.user.action.AccessControlAction"})
-//                    .put("userPrivilegeNames", new String[] {"jcr:all"})
-//                    .put("groupPrivilegeNames", new String[] {"jcr:read"})
-//                    .asOption(),
-//                ConfigurationAdminOptions.newConfiguration("org.apache.jackrabbit.oak.spi.security.user.action.DefaultAuthorizableActionProvider")
-//                    .create(true)
-//                    .put("length", 21)
-//                    .asOption(),
-//                ConfigurationAdminOptions.newConfiguration("org.apache.jackrabbit.oak.plugins.segment.SegmentNodeStoreService")
-//                    .create(true)
-//                    .put("name", "Default NodeStore")
-//                    .asOption(),
-//
-//                ConfigurationAdminOptions.factoryConfiguration("org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl.amended")
-//                    .create(true)
-//                    .put("user.mapping", "org.apache.sling.event=admin")
-//                    .asOption(),
-//                ConfigurationAdminOptions.newConfiguration("org.apache.sling.jcr.resource.internal.JcrSystemUserValidator")
-//                    .create(true)
-//                    .put("allow.only.system.user", "false")
-//                    .asOption(),
-//
-//                    // logging
-//                systemProperty("pax.exam.logging").value("none"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.commons.log", "4.0.6"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.commons.logservice", "1.0.6"),
-//                mavenBundle("org.slf4j", "slf4j-api", "1.7.13"),
-//                mavenBundle("org.slf4j", "jcl-over-slf4j", "1.7.13"),
-//                mavenBundle("org.slf4j", "log4j-over-slf4j", "1.7.13"),
-//
-//                mavenBundle("commons-io", "commons-io", "2.4"),
-//                mavenBundle("commons-fileupload", "commons-fileupload", "1.3.1"),
-//                mavenBundle("commons-collections", "commons-collections", "3.2.2"),
-//                mavenBundle("commons-codec", "commons-codec", "1.10"),
-//                mavenBundle("commons-lang", "commons-lang", "2.6"),
-//                mavenBundle("org.apache.commons", "commons-lang3", "3.5"),
-//                mavenBundle("commons-pool", "commons-pool", "1.6"),
-//
-//                mavenBundle("org.apache.servicemix.bundles", "org.apache.servicemix.bundles.concurrent", "1.3.4_1"),
-//
-//                mavenBundle("org.apache.geronimo.bundles", "commons-httpclient", "3.1_1"),
-//                mavenBundle("org.apache.tika", "tika-core", "1.9"),
-//                mavenBundle("org.apache.tika", "tika-bundle", "1.9"),
-//
-//                // infrastructure
-//                mavenBundle("org.apache.felix", "org.apache.felix.http.servlet-api", "1.1.2"),
-//                mavenBundle("org.apache.felix", "org.apache.felix.http.jetty", "3.1.6"),
-//                mavenBundle("org.apache.felix", "org.apache.felix.eventadmin", "1.4.8"),
-//                mavenBundle("org.apache.felix", "org.apache.felix.scr", "2.0.6"),
-//                mavenBundle("org.apache.felix", "org.apache.felix.configadmin", "1.8.10"),
-//                mavenBundle("org.apache.felix", "org.apache.felix.inventory", "1.0.4"),
-//                mavenBundle("org.apache.felix", "org.apache.felix.metatype", "1.1.2"),
-//
-//                // sling
-//                mavenBundle("org.apache.sling", "org.apache.sling.settings", "1.3.8"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.commons.osgi", "2.3.0"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.commons.mime", "2.1.8"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.commons.classloader", "1.3.2"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.commons.johnzon", "1.0.0"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.commons.scheduler", "2.4.14"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.commons.threads", "3.2.4"),
-//
-//                mavenBundle("org.apache.sling", "org.apache.sling.auth.core", "1.3.12"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.discovery.api", "1.0.2"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.discovery.commons", "1.0.20"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.discovery.standalone", "1.0.2"),
-
-//                mavenBundle("org.apache.sling", "org.apache.sling.api", "2.14.2"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.resourceresolver", "1.4.18"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.adapter", "2.1.10"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.jcr.resource", "2.8.0"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.jcr.classloader", "3.2.2"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.jcr.contentloader", "2.2.4"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.engine", "2.6.2"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.serviceusermapper", "1.3.2"),
-
-//                mavenBundle("org.apache.sling", "org.apache.sling.jcr.jcr-wrapper", "2.0.0"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.jcr.api", "2.4.0"),
-//                mavenBundle("org.apache.sling", "org.apache.sling.jcr.base", "2.4.0"),
-
-//                mavenBundle("com.google.guava", "guava", "15.0"),
-//                mavenBundle("org.apache.jackrabbit", "jackrabbit-api", jackrabbitVersion),
-//                mavenBundle("org.apache.jackrabbit", "jackrabbit-jcr-commons", jackrabbitVersion),
-//                mavenBundle("org.apache.jackrabbit", "jackrabbit-spi", jackrabbitVersion),
-//                mavenBundle("org.apache.jackrabbit", "jackrabbit-spi-commons", jackrabbitVersion),
-//                mavenBundle("org.apache.jackrabbit", "jackrabbit-jcr-rmi", jackrabbitVersion),
-
-//                mavenBundle("org.apache.felix", "org.apache.felix.jaas", "0.0.4")art of the sling.event bundle to
-                // ensure the parameter 'startup.delay' is properly set to 1sec
-                // for these ITs - as otherwise, the default of 30sec applies -
-                // which will cause the tests to fail
-                // @see setup() where the bundle is finally started - after reconfig
-                CoreOptions.bundle( bundleFile.toURI().toString() ).start(false),
-//        		repository("https://repo1.maven.org/maven2").id("central"),
-        		baseConfiguration(),
-//                factoryConfiguration("org.apache.sling.jcr.repoinit.RepositoryInitializer")
-//            		.put("scripts", new String[] {"register namespace (sling) http://sling.apache.org/1.0"}).asOption(),
-        		SlingOptions.slingQuickstartOakTar(workingDirectory,httpPort),
-        		SlingOptions.logback(),
-        		testBundle("bundle.filename"), // this bundle
-        		SlingOptions.slingDiscovery(),
+                newConfiguration("org.apache.sling.event.impl.jobs.jcr.PersistenceHandler")
+                    .put(JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY, 3L)
+                    .put("startup.delay", 1L)
+                    .asOption(),
+                baseConfiguration(),
+                SlingOptions.slingQuickstartOakTar(workingDirectory, httpPort),
+                SlingOptions.logback(), testBundle("bundle.filename"), // this bundle
+                SlingOptions.slingDiscovery(),
                 mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.event.dea").version(versionResolver),
                 mavenBundle().groupId("org.apache.felix").artifactId("org.apache.felix.inventory").version(versionResolver),
+                mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.serviceusermapper").version("1.5.2"),
                 factoryConfiguration("org.apache.sling.jcr.repoinit.RepositoryInitializer")
                     .put("scripts", new String[]{"create service user sling-event\n\n  create path (sling:Folder) /var/eventing\n\n  set ACL for sling-event\n\n    allow   jcr:all     on /var/eventing\n\n  end"})
                     .asOption(),
                 factoryConfiguration("org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl.amended")
-                    .put("user.mapping", new String[]{"org.apache.sling.event=sling-event", "org.apache.sling.event.dea=sling-event"})
+                    .put("user.mapping", new String[]{"org.apache.sling.event=[sling-event]", "org.apache.sling.event.dea=[sling-event]"})
                     .asOption(),
-
+                newConfiguration("org.apache.sling.commons.scheduler.impl.QuartzScheduler")
+                    .put("allowedPoolNames",new String[] {"oak"})
+                    .asOption(),
+                // this test code uses loginAdministrative!
+                newConfiguration("org.apache.sling.jcr.base.internal.LoginAdminWhitelist")
+                    .put("whitelist.bundles.regexp", "PAXEXAM-PROBE-.*")
+                    .asOption(),
+                // otherwise we get ignored events
+                newConfiguration("org.apache.felix.eventadmin.impl.EventAdmin")
+                        .put("org.apache.felix.eventadmin.IgnoreTimeout", "*")
+                        .asOption(),
+                mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.testing.tools").version("1.0.14"),
+                mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.commons.json").version("2.0.20"),
                 junitBundles()
            );
     }
@@ -278,8 +155,7 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
             failOnUnresolvedBundles(),
             keepCaches(),
             localMavenRepo(),
-//            repository("https://repository.apache.org/snapshots/").id("apache-snapshots").allowSnapshots(),
-          repository("https://repo1.maven.org/maven2/").id("apache-snapshots").allowSnapshots(),
+            repository("https://repo1.maven.org/maven2/").id("apache-snapshots").allowSnapshots(),
             CoreOptions.workingDirectory(workingDirectory()),
             mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.testing.paxexam").versionAsInProject(),
             paxTinybundles(),
@@ -317,32 +193,7 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
     }
 
     public void setup() throws IOException {
-        // set load delay to 3 sec
-        final org.osgi.service.cm.Configuration c2 = this.configAdmin.getConfiguration("org.apache.sling.event.impl.jobs.jcr.PersistenceHandler", null);
-        Dictionary<String, Object> p2 = new Hashtable<>();
-        p2.put(JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY, 3L);
-        // and startup.delay to 1sec - otherwise default of 30sec breaks tests!
-        p2.put("startup.delay", 1L);
-        c2.update(p2);
-
-        // SLING-5560 : since the above (re)config is now applied, we're safe
-        // to go ahead and start the sling.event bundle.
-        // this time, the JobManagerConfiguration will be activated
-        // with the 'startup.delay' set to 1sec - so that ITs actually succeed
-        try {
-            Bundle[] bundles = bc.getBundles();
-            for (Bundle bundle : bundles) {
-                if (bundle.getSymbolicName().contains("sling.event")) {
-                    // assuming we only have 1 bundle that contains 'sling.event'
-                    LoggerFactory.getLogger(getClass()).info("starting bundle... "+bundle);
-                    bundle.start();
-                    break;
-                }
-            }
-        } catch (BundleException e) {
-            LoggerFactory.getLogger(getClass()).error("could not start sling.event bundle: "+e, e);
-            throw new RuntimeException(e);
-        }
+        log.info("starting setup");
     }
 
     private int deleteCount;
@@ -362,6 +213,7 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
     }
 
     public void cleanup() {
+        log.info("starting cleanup");
         // clean job area
         final ServiceReference<ResourceResolverFactory> ref = this.bc.getServiceReference(ResourceResolverFactory.class);
         final ResourceResolverFactory factory = this.bc.getService(ref);
@@ -409,6 +261,7 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
             // ignore
         }
         this.sleep(1000);
+        log.info("cleanup completed");
     }
 
     /**
@@ -428,8 +281,10 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
         long result = -1;
         try {
             final Collection<ServiceReference<PropertyProvider>> refs = this.bc.getServiceReferences(PropertyProvider.class, "(changeCount=*)");
+            log.info("GetConsumerChangeCount refs.size = {}", refs.size());
             if ( !refs.isEmpty() ) {
-                result = (Long)refs.iterator().next().getProperty("changeCount");
+                result = refs.stream().mapToLong(r -> (Long) r.getProperty("changeCount")).max().getAsLong();
+                log.info("GetConsumerChangeCount changeCount = {} ", result);
             }
         } catch ( final InvalidSyntaxException ignore ) {
             // ignore
@@ -446,6 +301,7 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
                 return;
             }
             sleep(50);
+            log.info("waitConsumerChangeCount (is={}, expected={})",cc, minimum);
         } while ( true );
     }
 
@@ -460,7 +316,9 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
         final ServiceRegistration<JobConsumer> reg = this.bc.registerService(JobConsumer.class,
                 handler, props);
         this.registrations.add(reg);
+        log.info("registered JobConsumer for topic {} and changecount={}",topic, cc);
         this.waitConsumerChangeCount(cc + 1);
+        log.info("registered2 JobConsumer for topic {} and changecount={}",topic, cc);
         return reg;
     }
 
